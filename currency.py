@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+This module define Currency related objects.
+"""
 
 
 import datetime
@@ -9,29 +12,29 @@ class Currency:
     """
     A general currency with exchange rate to CNY available.
     """
-    def __init__(self, name, exchangerate_factory=None):
+    def __init__(self, name, rate_source=None):
         self.name = name
-        self.factory = exchangerate_factory
+        self.rate_factory = rate_source
 
     def __str__(self):
         return self.name.upper()
 
-    def me2cny(self, day=datetime.date.today()):
+    def me2cny(self, t=datetime.date.today()):
         """
         Return exchange rate from me to CNY.
         """
-        if self.factory:
-            rates = self.factory.get_exchangerate()
-            if day in rates.index:
-                return rates.loc[day, 'Rate']
-            else:
-                day_stamp = pd.Timestamp(day)
-                if day_stamp > rates.index[0]:
-                    return rates.loc[:day].iloc[-1]['Rate']
-                else:
-                    raise KeyError(f'No exchange rate found on {day}')
+        if self.rate_factory:
+            rate = self.rate_factory.get(t)
         else:
-            return 1
+            rate = 1.0
+
+        return rate
+
+
+def get_exchange_rate(source='file'):
+    """ The factory method"""
+    sources = dict(file=FileExchangeRate)
+    return sources[source]()
 
 
 class FileExchangeRate:
@@ -40,9 +43,17 @@ class FileExchangeRate:
     """
     def __init__(self, filepath):
         self.csvfile = filepath
-        
-    def get_exchangerate():
+
+    def get(self, t):
         """
-        Return exchange rates from csv file.
+        Return exchange rates in specified time.
         """
-        return pd.read_csv(self.csvfile, parse_dates=['Date'], index_col=0)
+        rates = pd.read_csv(self.csvfile, parse_dates=['Date'], index_col=0)
+        if t in rates.index:
+            return rates.loc[t, 'Rate']
+        else:
+            t_stamp = pd.Timestamp(t)
+            if t_stamp > rates.index[0]:
+                return rates.loc[:t].iloc[-1]['Rate']
+            else:
+                raise KeyError(f'No exchange rate found on {t}')
