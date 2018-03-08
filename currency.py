@@ -23,18 +23,11 @@ class Currency:
         """
         Return exchange rate from me to CNY.
         """
+        rate = 1.0
         if self.rate_factory:
             rate = self.rate_factory.get(t)
-        else:
-            rate = 1.0
 
         return rate
-
-
-def get_exchange_rate(source='file'):
-    """ The factory method"""
-    sources = dict(file=FileExchangeRate)
-    return sources[source]()
 
 
 class FileExchangeRate:
@@ -48,12 +41,12 @@ class FileExchangeRate:
         """
         Return exchange rates in specified time.
         """
-        rates = pd.read_csv(self.csvfile, parse_dates=['Date'], index_col=0)
+        rates = pd.read_csv(self.csvfile, parse_dates=[0], index_col=0)
         if t in rates.index:
-            return rates.loc[t, 'Rate']
+            return rates.loc[t][0]
         else:
             t_stamp = pd.Timestamp(t)
             if t_stamp > rates.index[0]:
-                return rates.loc[:t].iloc[-1]['Rate']
+                return rates.loc[:t].iloc[-1][0]
             else:
                 raise KeyError(f'No exchange rate found on {t}')
